@@ -22,6 +22,28 @@
  
  返回值为1：新版本下载完成，5s后更新，请在5s内退出所有占用；  
  返回值为0：版本是最新版。  
+ ## How to use?
+ In your application that requires updates, use a system call to invoke this `.exe` file. For example, in C language:
+
+ ```
+ // The first parameter "3.2.1" represents the current version of the program. It's recommended to hardcode this in your program.
+ // The second parameter is your URL, which can be stored in a configuration file or hardcoded.
+ path = "path\\to\\dic\\Auto-Update-Checker.exe 3.2.1 \"http://xxx/xxx.json\""
+ // .data is used to pass a pointer
+ int result = system(path.data());
+ if(result == 1){
+     // This software will directly update. In the future, a popup will be added to  confirm the update.
+     // When the result is returned, the file has already been downloaded,
+     // and the update will begin after 5 seconds. Please close the main program in time to avoid update failure.
+    printf("Updating...");
+    return 0; // Exit the program to avoid file occupation causing the update to fail.
+ }
+ ```
+ Only three-segment version numbers are supported. If you only need two-segment version numbers, you can set the last segment to 0.
+
+ Return Values:
+ 1: A new version has been downloaded. The update will start after 5 seconds. Please close all processes within 5 seconds.
+ 0: The version is already up-to-date.
  
 # About compilation | 如何编译？
 
