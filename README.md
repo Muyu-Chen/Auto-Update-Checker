@@ -13,7 +13,7 @@ Once integrated, there’s no need to modify anything to take advantage of futur
 
 You no longer need to worry about any details related to updates. Just update the version number in the JSON file, upload your latest build, and the entire update process is handled for you—no additional effort required.  
 
-### 为什么选择它更有益处？  
+### 为什么选择它更好？  
 通过选择此工具，您可以获得一个简单而强大的解决方案，以最低的成本确保您的应用程序始终保持最新。它的无缝集成、自我更新功能以及简单的使用体验，为您节省时间、简化维护，并让开发者对更新流程拥有完全掌控。  
 
 集成一次后，您无需再修改任何内容，即可享受未来所有的更新和新功能。我们的接口支持向前兼容，只需替换新的 `.exe` 文件即可生效。而对于客户端，只需将新的 `.exe` 文件打包到更新包中，即可完成更新并获得最新功能。  
@@ -78,9 +78,9 @@ You no longer need to worry about any details related to updates. Just update th
 # How to use?
  在你需要更新的应用程序中，使用系统的调用命令调用此exe，例如在C语言中：  
  ```
- // 第一个参数 3.2.1 为目前程序的版本号，建议硬编码进入程序
+ // 第一个参数 4.3.2.1 为目前程序的版本号，建议硬编码进入程序
  // 第二个参数为你的网址，可以放入配置文件中，或硬编码
- path = "path\\to\\dic\\Auto-Update-Checker.exe 3.2.1 \"http://xxx/xxx.json\""
+ path = "path\\to\\dic\\Auto-Update-Checker.exe 4.3.2.1 \"http://xxx/xxx.json\""
  // .data为传递指针
  int result = system(path.data());  
  if(result == 1){
@@ -91,7 +91,7 @@ You no longer need to worry about any details related to updates. Just update th
     return 0; //退出程序，避免占用导致更新失败
  }
  ```
- 其中仅支持三位版本号，若仅使用两位版本号，可以直接把最后一位写为0即可。   
+ 其中仅支持低于4位的版本号，即，如果最新版为4.3.2.1，在线获取的最新版为4.3.3，也可以更新。无需补位。版本号从左往右获取并比较大小。   
  
  返回值为1：新版本下载完成，5s后更新，请在5s内退出所有占用；    
  返回值为0：版本是最新版。   
@@ -99,7 +99,7 @@ You no longer need to worry about any details related to updates. Just update th
  对于放在网站上的json，格式为：  
  ```
    {
-    "version": "10.9.8",
+    "version": "10.9.8.7",
     "download_url": "https://download.xxx.xxx/new_version.zip"
    }
  ```
@@ -109,9 +109,9 @@ You no longer need to worry about any details related to updates. Just update th
  In your application that requires updates, use a system call to invoke this `.exe` file. For example, in C language:  
 
  ```
- // The first parameter "3.2.1" represents the current version of the program. It's recommended to hardcode this in your program.  
+ // The first parameter "4.3.2.1" represents the current version of the program. It's recommended to hardcode this in your program.  
  // The second parameter is your URL, which can be stored in a configuration file or hardcoded.  
- path = "path\\to\\dic\\Auto-Update-Checker.exe 3.2.1 \"http://xxx/xxx.json\""
+ path = "path\\to\\dic\\Auto-Update-Checker.exe 4.3.2.1 \"http://xxx/xxx.json\""
  // .data is used to pass a pointer
  int result = system(path.data());
  if(result == 1){
@@ -122,7 +122,7 @@ You no longer need to worry about any details related to updates. Just update th
     return 0; // Exit the program to avoid file occupation causing the update to fail.
  }
  ```
- Only three-segment version numbers are supported. If you only need two-segment version numbers, you can set the last segment to 0.  
+ Implemented version number comparison that supports updating to versions with less than four segments. If the latest version is 4.3.2.1 and the online latest version is 4.3.3, an update is still possible. Version numbers are fetched and compared from left to right without padding.
 
  Return Values:
  1: A new version has been downloaded. The update will start after 5 seconds. Please close all processes within 5 seconds.  
@@ -132,7 +132,7 @@ You no longer need to worry about any details related to updates. Just update th
 
   ```
    {
-    "version": "10.9.8",
+    "version": "10.9.8.7",
     "download_url": "https://download.xxx.xxx/new_version.zip"
    }
  ```
