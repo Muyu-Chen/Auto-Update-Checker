@@ -20,8 +20,10 @@ namespace ConsoleApp1
         // 需要关闭当前程序的返回值为1
         {
             Console.WriteLine("Hello, World!");
-            string[] input = new string[args.Length];
+            string jsonUrl = "input your defualt url here";
+
             // 检查是否提供了参数
+            string[] input = new string[args.Length];
             if (args.Length == 0)
             {
                 Console.WriteLine("There are no input argument.");
@@ -35,9 +37,21 @@ namespace ConsoleApp1
                     Console.WriteLine("The argument is: " + args[i]);
                 }
             }
-
+            if (args.Length != 2)
+            {
+                Console.WriteLine("There are no url argument. Using default url.");
+            }
+            else
+            {
+                if(args[1].equals("no_url"))
+                {
+                    Console.WriteLine("There are no url argument. Using default url.");
+                }
+                jsonUrl = args[1];
+                Console.WriteLine("The url argument is: " + jsonUrl);
+            }
             // 启动异步操作，但不等待它完成
-            var fetchTask = FetchAndPrintVersion(input[1]);
+            var fetchTask = FetchAndPrintVersion(jsonUrl);
             // 在等待异步操作完成期间执行其他操作
             Console.WriteLine("Doing other work...");
             // 等待异步操作完成并获取结果
@@ -53,12 +67,12 @@ namespace ConsoleApp1
             int result = CompareVersions(input[0], version["version"]);
             if (result == 1)
             {
-                Console.WriteLine("The version is up to date.");
+                Console.WriteLine("The version is newer than the current version.");
                 return 0;
             }
             else if (result == 2)
             {
-                Console.WriteLine("版本落后，\n即将自动更新。");
+                Console.WriteLine("The version is older, updating...");
                 return await updateProgram(downloadUrl);
             }
             else
@@ -116,19 +130,20 @@ namespace ConsoleApp1
 
         static int CompareVersions(string version1, string version2)
         {
-            int[] v1Parts = new int[3];
-            int[] v2Parts = new int[3];
+            int[] v1Parts = new int[4];
+            int[] v2Parts = new int[4];
 
             string[] v1Strings = version1.Split('.');
             string[] v2Strings = version2.Split('.');
 
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 4; i++)
             {
-                Console.WriteLine("v1: " + v1Strings[i]);
-                Console.WriteLine("v2: " + v2Strings[i]);
+                int v1Part = (i < v1Strings.Length ? int.Parse(v1Strings[i]) : 0);
+                int v2Part = (i < v2Strings.Length ? int.Parse(v2Strings[i]) : 0);
+
+                Console.WriteLine("v1: " + v1Part);
+                Console.WriteLine("v2: " + v2Part);
                 Console.WriteLine("--------");
-                int v1Part = int.Parse(v1Strings[i]);
-                int v2Part = int.Parse(v2Strings[i]);
 
                 if (v1Part > v2Part)
                 {
