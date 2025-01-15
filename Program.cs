@@ -9,8 +9,9 @@ using System.Text.Json;
 using System.IO;
 using System.Reflection;
 using System.IO.Compression;
-
-
+using System.Windows;
+using System.Diagnostics;
+using System.Globalization;
 
 namespace ConsoleApp1
 {
@@ -19,39 +20,27 @@ namespace ConsoleApp1
         static async Task<int> Main(string[] args)
         // 需要关闭当前程序的返回值为1
         {
-            Console.WriteLine("Hello, World!");
-            string jsonUrl = "input your defualt url here";
+            string defaultURL = "input your defualt url here";
 
-            // 检查是否提供了参数
-            string[] input = new string[args.Length];
-            if (args.Length == 0)
+            Console.WriteLine("program start...");
+
+            string[] input = ParseArguments(args, defaultURL);
+            // 顺序：url, version, showConfirm
+            if (input[0].Equals("helpModel"))
             {
-                Console.WriteLine("There are no input argument.");
+                // 如果是帮助模式，直接返回
+                ShowHelp();
+                return 0;
+            }
+            if (input[0] == null || input[1] == null || input[2] == null)
+            {
+                // 如果缺少url或version参数，返回错误
+                // 若缺少showConfirm参数，使用默认值
                 return -1;
             }
-            else
-            {
-                for (int i = 0; i < args.Length; i++)
-                {
-                    input[i] = args[i];
-                    Console.WriteLine("The argument is: " + args[i]);
-                }
-            }
-            if (args.Length != 2)
-            {
-                Console.WriteLine("There are no url argument. Using default url.");
-            }
-            else
-            {
-                if(args[1].equals("no_url"))
-                {
-                    Console.WriteLine("There are no url argument. Using default url.");
-                }
-                jsonUrl = args[1];
-                Console.WriteLine("The url argument is: " + jsonUrl);
-            }
+
             // 启动异步操作，但不等待它完成
-            var fetchTask = FetchAndPrintVersion(jsonUrl);
+            var fetchTask = FetchAndPrintVersion(input[0]);
             // 在等待异步操作完成期间执行其他操作
             Console.WriteLine("Doing other work...");
             // 等待异步操作完成并获取结果
@@ -73,7 +62,32 @@ namespace ConsoleApp1
             else if (result == 2)
             {
                 Console.WriteLine("The version is older, updating...");
-                return await updateProgram(downloadUrl);
+                try
+                {
+                    int res = await updateProgram(downloadUrl);
+                    if (res == 0)
+                    {
+                        // 用户拒绝更新或无新版本
+                        return 0;
+                    }
+                    else if (res == 1)
+                    {
+                        // 用户同意更新且下载成功，主程序请立刻关闭程序
+                        return 1;
+                    }
+                    else
+                    {
+                        // 用户同意更新但更新失败
+                        return -1;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // 处理异常
+                    Console.WriteLine($"An error occurred: {ex.Message}");
+                    Console.WriteLine("Failed to update the program.");
+                    return 0;
+                }
             }
             else
             {
@@ -85,6 +99,18 @@ namespace ConsoleApp1
 
         static async Task<int> updateProgram(string downloadUrl)
         {
+            // 0: 用户拒绝更新
+            // 1: 用户同意更新且更新成功
+            // -1: 用户同意更新但更新失败
+            if (AskUserToUpdate())
+            {
+                Console.WriteLine("User confirmed the update.");
+            }
+            else
+            {
+                Console.WriteLine("User declined the update.");
+                return 0;
+            }
             // 获取程序所在目录
             string location = findLocation();
             Console.WriteLine($"The location of the program is: {location}");
@@ -99,6 +125,7 @@ namespace ConsoleApp1
             else
             {
                 Console.WriteLine("File download failed.");
+                return -1;
             }
 
 
@@ -329,5 +356,103 @@ namespace ConsoleApp1
             }
         }
 
+        // 新增函数：显示更新确认对话框
+
+
+        static bool AskUserToUpdate(string message = "A new version is available. Do you want to update?", string title = "Update Available")
+        {
+            // 显示消息框，询问用户是否确认更新
+            MessageBoxResult result = MessageBox.Show(
+                message, // 消息内容
+                title,   // 窗口标题
+                MessageBoxButton.YesNo, // 按钮选项
+                MessageBoxImage.Question // 图标样式
+            );
+
+            // 返回用户是否选择了 "Yes"
+            return result == MessageBoxResult.Yes;
+        }
+
+
+        static string[] ParseArguments(string[] argv, string defaultUrl = null)
+        {
+            if defaultURL.Equals("input your defualt url here")
+            {
+                Console.WriteLine("Please input your default url in the code.");
+                return new string[] { "helpModel", null, null };
+            }
+            
+            Dictionary<string, string> argsDict = new Dictionary<string, string>();
+
+            if (argv.Length == 0)
+            {
+                Console.WriteLine("No arguments provided. Please provide the required arguments.");
+                return new string[] { "helpModel", null, null };
+            }
+
+            for (int i = 0; i < argv.Length; i++)
+            {
+                if (argv[i].StartsWith("-") || argv[i].StartsWith("/"))
+                {
+                    string key = argv[i].Substring(1);
+                    string value = null;
+
+                    if (i + 1 < argv.Length && !argv[i + 1].StartsWith("-") && !argv[i + 1].StartsWith("/") && !string.IsNullOrWhiteSpace(argv[i + 1]))
+                    {
+                        value = argv[i + 1];
+                        i++; // Skip the next argument as it is the value
+                    }
+
+                    argsDict[key] = value ?? "true"; // 没有显式值时，默认为 "true"（布尔开关参数）
+                }
+            }
+
+            if (argsDict.ContainsKey("help"))
+            {
+                return new string[] { "helpModel", null, null };
+            }
+
+            // 设置默认值或获取用户提供的值
+            string url = argsDict.ContainsKey("url") ? argsDict["url"] : defaultUrl;
+            string version = argsDict.ContainsKey("version") ? argsDict["version"] : null;
+            string showConfirm = argsDict.ContainsKey("showConfirm") && argsDict["showConfirm"]?.ToLower() == "false" ? "false" : "true";
+
+
+            if (!argsDict.ContainsKey("version"))
+            {
+                Console.WriteLine("No version argument provided. Please provide the version of the program.");
+            }
+
+
+
+            return new string[] { url, version, showConfirm };
+        }
+
+
+        static void ShowHelp()
+        {
+            string programName = System.Diagnostics.Process.GetCurrentProcess().MainModule.ModuleName;
+            string programNameWithoutExtension = Path.GetFileNameWithoutExtension(programName);
+            string currentCulture = CultureInfo.CurrentCulture.Name;
+
+            if (currentCulture == "zh-CN")
+            {
+                Console.WriteLine($"用法: {programNameWithoutExtension} [选项]");
+                Console.WriteLine("选项:");
+                Console.WriteLine("  -url <url>          指定用于获取版本数据的URL（可选，默认使用硬编码的url）；");
+                Console.WriteLine("  -version <version>  指定程序的当前版本；");
+                Console.WriteLine("  -showConfirm        在更新前显示确认对话框（可选，默认显示）；");
+                Console.WriteLine("  -help               显示此帮助消息，若同时与前文使用，会被忽略。");
+            }
+            else
+            {
+                Console.WriteLine($"Usage: {programNameWithoutExtension} [options]");
+                Console.WriteLine("Options:");
+                Console.WriteLine("  -url <url>          Specify the URL to fetch version data.");
+                Console.WriteLine("  -version <version>  Specify the current version of the program.");
+                Console.WriteLine("  -showConfirm        Show confirmation dialog before updating(optional).");
+                Console.WriteLine("  -help               Show this help message.");
+            }
+        }
     }
 }

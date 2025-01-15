@@ -3,3 +3,5 @@
 /packages/
 /protos/
 .vs/
+FodyWeavers.xml
+FodyWeavers.xsd
