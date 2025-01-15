@@ -374,22 +374,21 @@ namespace ConsoleApp1
         }
 
 
-        static string[] ParseArguments(string[] argv, string defaultUrl = null)
-        {
-            if defaultURL.Equals("input your defualt url here")
-            {
-                Console.WriteLine("Please input your default url in the code.");
-                return new string[] { "helpModel", null, null };
-            }
-            
-            Dictionary<string, string> argsDict = new Dictionary<string, string>();
-
+        static string[] ParseArguments(string[] argv, string defaultURL = null)
+        {            
             if (argv.Length == 0)
             {
                 Console.WriteLine("No arguments provided. Please provide the required arguments.");
                 return new string[] { "helpModel", null, null };
             }
 
+            if (defaultURL.Equals("input your defualt url here"))
+            {
+                Console.WriteLine("Attention, please input your default url in the code.");
+                return new string[] { "helpModel", null, null };
+            }
+
+            Dictionary<string, string> argsDict = new Dictionary<string, string>();
             for (int i = 0; i < argv.Length; i++)
             {
                 if (argv[i].StartsWith("-") || argv[i].StartsWith("/"))
@@ -413,7 +412,7 @@ namespace ConsoleApp1
             }
 
             // 设置默认值或获取用户提供的值
-            string url = argsDict.ContainsKey("url") ? argsDict["url"] : defaultUrl;
+            string url = argsDict.ContainsKey("url") ? argsDict["url"] : defaultURL;
             string version = argsDict.ContainsKey("version") ? argsDict["version"] : null;
             string showConfirm = argsDict.ContainsKey("showConfirm") && argsDict["showConfirm"]?.ToLower() == "false" ? "false" : "true";
 
