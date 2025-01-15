@@ -1,6 +1,6 @@
 # Auto-Update-Checker
-The Auto-Update Checker is a lightweight, small, and portable tool designed for automatic updates. By checking the JSON file on a remote server to compare the current version with the latest version, the software automatically downloads, extracts, and replaces files to ensure it is always up-to-date. The tool includes features such as update pop-ups, update instructions, and more.  
-Auto-Update Checker 是一款用于自动更新的轻量、小巧、便携的实用工具。通过检查远程服务器上的 JSON 文件来对比当前版本和最新版本号，软件实现自动下载、解压和覆盖操作，从而保持软件始终为最新版本。工具还包括更新弹窗、更新说明等功能。  
+The **Auto-Update Checker** is a **lightweight, small, and portable** tool designed for **automatic updates**. By checking the JSON file on a remote server to compare the current version with the latest version, the software automatically downloads, extracts, and replaces files to ensure it is always up-to-date. The tool includes features such as update pop-ups, update instructions, and more.  
+**Auto-Update Checker** 是一款用于自动更新的**轻量、小巧、便携**的**实用更新工具**。通过检查远程服务器上的 JSON 文件来对比当前版本和最新版本号，软件实现自动下载、解压和覆盖操作，从而保持软件始终为最新版本。工具还包括更新弹窗、更新说明等功能。  
 
 
 # Why choose me? Is there any benefits?  
