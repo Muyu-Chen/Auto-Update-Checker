@@ -73,54 +73,170 @@ You no longer need to worry about any details related to updates. Just update th
    - **可定制的未来升级**  
      - 未来版本可能加入弹窗确认功能，提供更高的用户控制和交互体验。  
 
-
-
 # How to use?
- 在你需要更新的应用程序中，使用系统的调用命令调用此exe，例如在C语言中：  
+ 此程序接受以下命令行参数：
+
+ #### 中文
+ ```plaintext
+ 用法: Auto-Update-Checker.exe [选项]
+ 选项:
+   -url <url>          指定用于获取版本数据的URL（可选，默认使用硬编码的url）；
+   -version <version>  指定程序的当前版本；
+   -showConfirm        在更新前显示确认对话框（可选，默认显示，优先级低于json中的设置）；
+   -help               显示此帮助消息，若同时与其他选项一起使用，会被忽略。
  ```
- // 第一个参数 4.3.2.1 为目前程序的版本号，建议硬编码进入程序
- // 第二个参数为你的网址，可以放入配置文件中，或硬编码
- path = "path\\to\\dic\\Auto-Update-Checker.exe 4.3.2.1 \"http://xxx/xxx.json\""
- // .data为传递指针
- int result = system(path.data());  
- if(result == 1){
-    // 本软件会直接更新，未来将加入弹窗来确认是否更新；
-    // 在result结果出来的时候，文件已经下载好，
-    // 并在5s后开始覆盖文件，请及时关闭主程序，避免更新失败。
-    printf("正在更新...");
-    return 0; //退出程序，避免占用导致更新失败
+
+ #### English
+ ```plaintext
+ Usage: Auto-Update-Checker.exe [options]
+ Options:
+   -url <url>          Specify the URL to fetch version data.
+   -version <version>  Specify the current version of the program.
+   -showConfirm        Show confirmation dialog before updating (optional, default is true).
+   -help               Show this help message. If used with other options, it will be ignored.
+ ```
+
+ 在你需要更新的应用程序中，使用系统的调用命令调用此exe，例如在C语言中：  
+ ```c
+ // 定义当前版本号和更新的URL。
+ const char* version = "3.2.1"; // 当前程序的版本号（建议硬编码）。
+ const char* url = "http://xxx/xxx.json"; // 更新地址。
+
+ // 构造命令。
+ char command[256];
+ snprintf(command, sizeof(command), "path\\to\\dic\\Auto-Update-Checker.exe -version %s -url %s", version, url);
+
+ // 执行命令并处理结果。
+ int result = system(command);
+
+ if (result == 1) {
+    // 新版本已下载。
+    printf("正在更新...\n");
+    // 通知用户关闭主程序。
+    printf("请在5秒内关闭主程序以避免更新失败。\n");
+    return 0; // 退出程序以允许更新继续。
+ } else if (result == 0) {
+    // 当前版本已是最新或用户拒绝更新。
+    printf("未执行更新操作。\n");
+ } else if (result == -1) {
+    // 用户同意更新但更新失败。
+    printf("更新失败。\n");
+ } else {
+    // 处理其他意外结果。
+    printf("检查更新时发生未知错误。\n");
  }
  ```
- 其中仅支持低于4位的版本号，即，如果最新版为4.3.2.1，在线获取的最新版为4.3.3，也可以更新。无需补位。版本号从左往右获取并比较大小。   
+例如在Python中：
+ ```python
+ try:
+    exe_path = "Auto-Update-Checker.exe"
+    version = "2.3.1"
+    result = subprocess.Popen(
+
+        [
+            exe_path,
+            "-version",
+            version,
+            "-url",
+            "http://xxx/version.json",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+    )
+    stdout, stderr = result.communicate()
+    print("return code:", result.returncode)
+    print("std out:", stdout) # optional
+    print("err out:", stderr) # optional
+    if result.returncode == 1:
+        print("Exiting due to user choosing to update")
+        exit(0)
+    else:
+        print(f"return value is {result.returncode}, don't need to update")
+ except Exception as e:
+    print(f"error when updating: {e}")
+ ```
+
+ 其中仅支持不高于4位的版本号，即，如果最新版为4.3.2.1，在线获取的最新版为4.3.3，也可以更新。无需补位。版本号从左往右获取并比较大小。   
  
  返回值为1：新版本下载完成，5s后更新，请在5s内退出所有占用；    
  返回值为0：版本是最新版。   
 
  对于放在网站上的json，格式为：  
- ```
+ ```json
    {
     "version": "10.9.8.7",
-    "download_url": "https://download.xxx.xxx/new_version.zip"
+    "download_url": "https://download.xxx/new_version.zip",
+    "showConfirm": "true",
+    "update_notes": "your update notes"
    }
  ```
-你只需要更新版本号，所有客户端都可以在更新时检查是否有新的版本（若客户端版本更新，则不更新），并自动更新。  
+ "showConfirm": "true"的意思是是否提示用户需要更新，若为"false"则不提示，直接更新。此设置高于--showConfirm中的设置。
+ 你只需要更新版本号，所有客户端都可以在更新时检查是否有新的版本（若客户端版本更新，则不更新），并自动更新。  
 
  ## How to use?
  In your application that requires updates, use a system call to invoke this `.exe` file. For example, in C language:  
 
- ```
- // The first parameter "4.3.2.1" represents the current version of the program. It's recommended to hardcode this in your program.  
- // The second parameter is your URL, which can be stored in a configuration file or hardcoded.  
- path = "path\\to\\dic\\Auto-Update-Checker.exe 4.3.2.1 \"http://xxx/xxx.json\""
- // .data is used to pass a pointer
- int result = system(path.data());
- if(result == 1){
-     // This software will directly update. In the future, a popup will be added to  confirm the update.
-     // When the result is returned, the file has already been downloaded,
-     // and the update will begin after 5 seconds. Please close the main program in time to avoid update failure.
-    printf("Updating...");
-    return 0; // Exit the program to avoid file occupation causing the update to fail.
+ ```c
+ // Define the current version and update URL.
+ const char* version = "3.2.1"; // Current program version (hardcoded).
+ const char* url = "http://xxx/xxx.json"; // Update URL.
+
+ // Construct the command.
+ char command[256];
+ snprintf(command, sizeof(command), "path\\to\\dic\\Auto-Update-Checker.exe -version %s -url %s", version, url);
+
+ // Execute the command and handle the result.
+ int result = system(command);
+
+ if (result == 1) {
+    // A new version has been downloaded.
+    printf("Updating...\n");
+    // Notify the user to close the main program.
+    printf("Please close the main program within 5 seconds to avoid update failure.\n");
+    return 0; // Exit the program to allow the update to proceed.
+ } else if (result == 0) {
+    // The current version is up-to-date or the user refused to update.
+    printf("No update performed.\n");
+ } else if (result == -1) {
+    // The user agreed to update but the update failed.
+    printf("Update failed.\n");
+ } else {
+    // Handle other unexpected results.
+    printf("An unknown error occurred while checking for updates.\n");
  }
+ ```
+ Example in Python:
+ ```python
+ try:
+    exe_path = "Auto-Update-Checker.exe"
+    version = "2.3.1"
+    result = subprocess.Popen(
+
+        [
+            exe_path,
+            "-version",
+            version,
+            "-url",
+            "http://xxx/version.json",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+    )
+    stdout, stderr = result.communicate()
+    print("return code:", result.returncode)
+    print("std out:", stdout) # optional
+    print("err out:", stderr) # optional
+    if result.returncode == 1:
+        print("Exiting due to user choosing to update")
+        exit(0)
+    else:
+        print(f"return value is {result.returncode}, don't need to update")
+ except Exception as e:
+    print(f"error when updating: {e}")
  ```
  Implemented version number comparison that supports updating to versions with less than four segments. If the latest version is 4.3.2.1 and the online latest version is 4.3.3, an update is still possible. Version numbers are fetched and compared from left to right without padding.
 
@@ -130,7 +246,7 @@ You no longer need to worry about any details related to updates. Just update th
 
  For the Json file on the website:  
 
-  ```
+  ```json
    {
     "version": "10.9.8.7",
     "download_url": "https://download.xxx.xxx/new_version.zip"
@@ -162,6 +278,11 @@ You no longer need to worry about any details related to updates. Just update th
 编译成功后，您可以在项目的 `bin\Debug` 或 `bin\Release` 目录下找到生成的可执行文件。  
 
 如果您遇到任何问题，请参考项目的 [README.md](README.md) 文件或联系[项目发起者](https://github.com/Muyu-Chen)以获取帮助。  
+
+# Todo  
+ - [ ] 添加参数：重新启动程序（写入bat中）
+ - [ ] 弹窗弹出更新说明
+ - [ ] 优化界面  
 
 # 免责声明 | Disclaimer
 本软件使用Apache协议，可以闭源、商业使用，请使用时携带作者信息与许可证。  

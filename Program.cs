@@ -13,13 +13,14 @@ using System.Windows;
 using System.Diagnostics;
 using System.Globalization;
 
-namespace ConsoleApp1
+namespace autoupdate
 {
     class Program
     {
         static async Task<int> Main(string[] args)
         // 需要关闭当前程序的返回值为1
         {
+            Console.OutputEncoding = Encoding.UTF8;
             string defaultURL = "input your defualt url here";
 
             Console.WriteLine("program start...");
@@ -44,16 +45,21 @@ namespace ConsoleApp1
             // 在等待异步操作完成期间执行其他操作
             Console.WriteLine("Doing other work...");
             // 等待异步操作完成并获取结果
-            var version = await fetchTask;
-            Console.WriteLine(version["url"], version["version"]);
-            string downloadUrl = version["url"];
+            var jsonContent = await fetchTask;
+            if(jsonContent == null)
+            {
+                Console.WriteLine("jsonContent is null, return");
+                return -1;
+            }
+            Console.WriteLine(jsonContent["url"], jsonContent["version"]);
+            //string downloadUrl = version["url"];
 
-            if (version == null)
+            if (jsonContent == null)
             {
                 Console.WriteLine("Failed to fetch version data.");
                 return -1;
             }
-            int result = CompareVersions(input[0], version["version"]);
+            int result = CompareVersions(input[1], jsonContent["version"]);
             if (result == 1)
             {
                 Console.WriteLine("The version is newer than the current version.");
@@ -64,7 +70,8 @@ namespace ConsoleApp1
                 Console.WriteLine("The version is older, updating...");
                 try
                 {
-                    int res = await updateProgram(downloadUrl);
+                    Console.WriteLine("Checking for updates...");
+                    int res = await updateProgram(jsonContent["url"], jsonContent["update_notes"],jsonContent["showConfirm"]);
                     if (res == 0)
                     {
                         // 用户拒绝更新或无新版本
@@ -97,19 +104,26 @@ namespace ConsoleApp1
 
         }
 
-        static async Task<int> updateProgram(string downloadUrl)
+        static async Task<int> updateProgram(string downloadUrl, string updateNotes, string showConfirm = "true")
         {
             // 0: 用户拒绝更新
             // 1: 用户同意更新且更新成功
             // -1: 用户同意更新但更新失败
-            if (AskUserToUpdate())
+            if (showConfirm == "false")
             {
-                Console.WriteLine("User confirmed the update.");
+                Console.WriteLine("The publisher has set to update without asking the user.");
             }
             else
             {
-                Console.WriteLine("User declined the update.");
-                return 0;
+                if (AskUserToUpdate(updateNotes))
+                {
+                    Console.WriteLine("User confirmed the update.");
+                }
+                else
+                {
+                    Console.WriteLine("User declined the update.");
+                    return 0;
+                }
             }
             // 获取程序所在目录
             string location = findLocation();
@@ -157,6 +171,8 @@ namespace ConsoleApp1
 
         static int CompareVersions(string version1, string version2)
         {
+            Console.WriteLine("version in user's pc: " + version1);
+            Console.WriteLine("version from the web: " + version2);
             int[] v1Parts = new int[4];
             int[] v2Parts = new int[4];
 
@@ -168,13 +184,13 @@ namespace ConsoleApp1
                 int v1Part = (i < v1Strings.Length ? int.Parse(v1Strings[i]) : 0);
                 int v2Part = (i < v2Strings.Length ? int.Parse(v2Strings[i]) : 0);
 
-                Console.WriteLine("v1: " + v1Part);
-                Console.WriteLine("v2: " + v2Part);
-                Console.WriteLine("--------");
+                //Console.WriteLine("v1: " + v1Part);
+                //Console.WriteLine("v2: " + v2Part);
+                //Console.WriteLine("--------");
 
                 if (v1Part > v2Part)
                 {
-                    Console.WriteLine("v1 > v2");
+                    //Console.WriteLine("v1 > v2");
                     return 1; //version1 大 返回1
                 }
                 if (v1Part < v2Part)
@@ -189,9 +205,9 @@ namespace ConsoleApp1
 
         static string findLocation()
         {
-            Console.WriteLine($"\n程序实际所在目录（与调用无关）不关心程序集的物理位置，始终返回程序启动所在的根目录。用于找到与程序同目录的配置文件、资源文件等: {AppContext.BaseDirectory}");
-            Console.WriteLine($"\n程序实际所在目录（更精确到程序集路径）,如果程序集被影子复制，它返回的是程序集的原始位置，而不是复制后的路径。如果程序集被加载到内存中运行（如某些托管环境下的动态加载），它可能返回空字符串或特殊路径: {Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}");
-            Console.WriteLine($"\n当前工作目录（与调用路径相关）: {Environment.CurrentDirectory}");
+            //Console.WriteLine($"\n程序实际所在目录（与调用无关）不关心程序集的物理位置，始终返回程序启动所在的根目录。用于找到与程序同目录的配置文件、资源文件等: {AppContext.BaseDirectory}");
+            //Console.WriteLine($"\n程序实际所在目录（更精确到程序集路径）,如果程序集被影子复制，它返回的是程序集的原始位置，而不是复制后的路径。如果程序集被加载到内存中运行（如某些托管环境下的动态加载），它可能返回空字符串或特殊路径: {Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}");
+            //Console.WriteLine($"\n当前工作目录（与调用路径相关）: {Environment.CurrentDirectory}");
             return Path.GetDirectoryName(AppContext.BaseDirectory);
         }
 
@@ -200,12 +216,6 @@ namespace ConsoleApp1
         // 异步方法，返回一个 Task 字典，其中包含版本号和下载链接
         static async Task<Dictionary<string, string>> FetchAndPrintVersion(string urlFromWeb)
         {
-            // JSON 文件的 URL
-            if (string.IsNullOrEmpty(urlFromWeb))
-            {
-                // 硬编码 JSON URL
-                urlFromWeb = "";
-            }
             try
             {
                 // 创建 HttpClient 实例
@@ -218,19 +228,42 @@ namespace ConsoleApp1
                     // 解析 JSON 并读取 "version" 键
                     var jsonData = JsonSerializer.Deserialize<JsonDocument>(jsonString);
 
-                    if (jsonData != null && jsonData.RootElement.TryGetProperty("version", out var version) && jsonData.RootElement.TryGetProperty("download_url", out var url))
+                    if (jsonData != null)
                     {
-                        Console.WriteLine($"Version: {version.GetString()}");
+                        bool versionFound = jsonData.RootElement.TryGetProperty("version", out var version);
+                        bool urlFound = jsonData.RootElement.TryGetProperty("download_url", out var url);
+                        bool showConfirmFound = jsonData.RootElement.TryGetProperty("showConfirm", out var showConfirm);
+                        bool updateNotesFound = jsonData.RootElement.TryGetProperty("update_notes", out var updateNotes);
+
+                        if(versionFound == false || urlFound == false)
+                        {
+                            Console.WriteLine("JSON data is invalid.");
+                            return null;
+                        }
+                        // 设置返回值
+                        string versionValue = versionFound ? version.GetString() : "default_value";
+                        string urlValue = urlFound ? url.GetString() : "default_value";
+                        string showConfirmValue = showConfirmFound ? showConfirm.GetString() : "true";
+                        string updateNotesValue = updateNotesFound ? updateNotes.GetString() : "No update notes available";
+
+                        Console.WriteLine($"Version: {versionValue}");
+                        Console.WriteLine($"Download URL: {urlValue}");
+                        Console.WriteLine($"showConfirm: {showConfirmValue}");
+                        Console.WriteLine($"Update Notes: {updateNotesValue}");
+
                         var result = new Dictionary<string, string>
                         {
-                            { "version", version.GetString() },
-                            { "url", url.GetString() }
+                            { "version", versionValue },
+                            { "url", urlValue },
+                            { "showConfirm", showConfirmValue.ToString() },
+                            { "update_notes", updateNotesValue }
                         };
+
                         return result;
                     }
                     else
                     {
-                        Console.WriteLine("Key 'version' not found in the JSON.");
+                        Console.WriteLine("JSON data is null.");
                         return null;
                     }
                 }
@@ -359,8 +392,11 @@ namespace ConsoleApp1
         // 新增函数：显示更新确认对话框
 
 
-        static bool AskUserToUpdate(string message = "A new version is available. Do you want to update?", string title = "Update Available")
+        static bool AskUserToUpdate(string pdateNotes)
         {
+            string title = "Update Available";
+            string message = $"A new version is available. Do you want to update?\n\nUpdate Notes:\n{pdateNotes}";
+
             // 显示消息框，询问用户是否确认更新
             MessageBoxResult result = MessageBox.Show(
                 message, // 消息内容
@@ -375,16 +411,10 @@ namespace ConsoleApp1
 
 
         static string[] ParseArguments(string[] argv, string defaultURL = null)
-        {            
+        {
             if (argv.Length == 0)
             {
                 Console.WriteLine("No arguments provided. Please provide the required arguments.");
-                return new string[] { "helpModel", null, null };
-            }
-
-            if (defaultURL.Equals("input your defualt url here"))
-            {
-                Console.WriteLine("Attention, please input your default url in the code.");
                 return new string[] { "helpModel", null, null };
             }
 
@@ -422,6 +452,11 @@ namespace ConsoleApp1
                 Console.WriteLine("No version argument provided. Please provide the version of the program.");
             }
 
+            if (url.Equals("input your defualt url here"))
+            {
+                Console.WriteLine("Attention, please input your default url in the code or provide the url argument.");
+                return new string[] { "helpModel", null, null };
+            }
 
 
             return new string[] { url, version, showConfirm };
