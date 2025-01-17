@@ -80,10 +80,10 @@ You no longer need to worry about any details related to updates. Just update th
  ```plaintext
  用法: Auto-Update-Checker.exe [选项]
  选项:
-   -url <url>          指定用于获取版本数据的URL（可选，默认使用硬编码的url）；
+   -url <url>          指定用于获取版本数据的URL（可选，默认使用硬编码的url；若你使用release版本，请一定带参数）；
    -version <version>  指定程序的当前版本；
    -showConfirm        在更新前显示确认对话框（可选，默认显示，优先级低于json中的设置）；
-   -help               显示此帮助消息，若同时与其他选项一起使用，会被忽略。
+   -help               显示此帮助消息，优先级最高。
  ```
 
  #### English
@@ -92,8 +92,8 @@ You no longer need to worry about any details related to updates. Just update th
  Options:
    -url <url>          Specify the URL to fetch version data.
    -version <version>  Specify the current version of the program.
-   -showConfirm        Show confirmation dialog before updating (optional, default is true).
-   -help               Show this help message. If used with other options, it will be ignored.
+   -showConfirm        Show confirmation dialog before updating (optional, default is true) (json online command > here > defualt).
+   -help               Show this help message. If used with other options, other command will be ignored.
  ```
 
  在你需要更新的应用程序中，使用系统的调用命令调用此exe，例如在C语言中：  
@@ -249,7 +249,9 @@ You no longer need to worry about any details related to updates. Just update th
   ```json
    {
     "version": "10.9.8.7",
-    "download_url": "https://download.xxx.xxx/new_version.zip"
+    "download_url": "https://download.xxx/new_version.zip",
+    "showConfirm": "true",
+    "update_notes": "your update notes"
    }
  ```
    
@@ -281,7 +283,7 @@ You no longer need to worry about any details related to updates. Just update th
 
 # Todo  
  - [ ] 添加参数：重新启动程序（写入bat中）
- - [ ] 弹窗弹出更新说明
+ - [x] 弹窗弹出更新说明
  - [ ] 优化界面  
 
 # 免责声明 | Disclaimer

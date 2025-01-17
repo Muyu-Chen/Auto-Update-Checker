@@ -395,7 +395,7 @@ namespace autoupdate
         static bool AskUserToUpdate(string pdateNotes)
         {
             string title = "Update Available";
-            string message = $"A new version is available. Do you want to update?\n\nUpdate Notes:\n{pdateNotes}";
+            string message = $"A new version is available. Do you want to update?\nUpdate Notes:\n{pdateNotes}";
 
             // 显示消息框，询问用户是否确认更新
             MessageBoxResult result = MessageBox.Show(
