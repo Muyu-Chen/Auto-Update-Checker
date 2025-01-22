@@ -169,10 +169,12 @@ You no longer need to worry about any details related to updates. Just update th
     "version": "10.9.8.7",
     "download_url": "https://download.xxx/new_version.zip",
     "showConfirm": "true",
-    "update_notes": "your update notes"
+    "update_notes": "your update notes",
+    "md5": "xxxxxxxxxx"
    }
  ```
  "showConfirm": "true"的意思是是否提示用户需要更新，若为"false"则不提示，直接更新。此设置高于--showConfirm中的设置。
+ "md5"可选，若没有就不对完整性进行验证。
  你只需要更新版本号，所有客户端都可以在更新时检查是否有新的版本（若客户端版本更新，则不更新），并自动更新。  
 
  ## How to use?
@@ -251,10 +253,12 @@ You no longer need to worry about any details related to updates. Just update th
     "version": "10.9.8.7",
     "download_url": "https://download.xxx/new_version.zip",
     "showConfirm": "true",
-    "update_notes": "your update notes"
+    "update_notes": "your update notes",
+    "md5": "xxxxxxx"
    }
  ```
-   
+ md5 is optional.  
+
 # About compilation | 如何编译？
 
 要编译此项目，请按照以下步骤操作：  
@@ -284,6 +288,7 @@ You no longer need to worry about any details related to updates. Just update th
 # Todo  
  - [ ] 添加参数：重新启动程序（写入bat中）
  - [x] 弹窗弹出更新说明
+ - [x] 增加完整性验证
  - [ ] 优化界面  
 
 # 免责声明 | Disclaimer

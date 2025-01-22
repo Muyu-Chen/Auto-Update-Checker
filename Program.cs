@@ -12,6 +12,8 @@ using System.IO.Compression;
 using System.Windows;
 using System.Diagnostics;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace autoupdate
 {
@@ -46,7 +48,7 @@ namespace autoupdate
             Console.WriteLine("Doing other work...");
             // 等待异步操作完成并获取结果
             var jsonContent = await fetchTask;
-            if(jsonContent == null)
+            if (jsonContent == null)
             {
                 Console.WriteLine("jsonContent is null, return");
                 return -1;
@@ -71,7 +73,7 @@ namespace autoupdate
                 try
                 {
                     Console.WriteLine("Checking for updates...");
-                    int res = await updateProgram(jsonContent["url"], jsonContent["update_notes"],jsonContent["showConfirm"]);
+                    int res = await updateProgram(jsonContent);
                     if (res == 0)
                     {
                         // 用户拒绝更新或无新版本
@@ -104,11 +106,28 @@ namespace autoupdate
 
         }
 
-        static async Task<int> updateProgram(string downloadUrl, string updateNotes, string showConfirm = "true")
+        static async Task<int> updateProgram(jsonContent)
         {
             // 0: 用户拒绝更新
             // 1: 用户同意更新且更新成功
             // -1: 用户同意更新但更新失败
+            string downloadUrl;
+            string updateNotes;
+            string showConfirm = "true";
+            if (jsonContent != null)
+            {
+                downloadUrl = jsonContent["url"];
+                updateNotes = jsonContent["update_notes"];
+                if (jsonContent.ContainsKey("showConfirm")){
+                    showConfirm = jsonContent["showConfirm"];
+                }
+            }
+            else
+            {
+                Console.WriteLine("Failed to fetch version data.");
+                return -1;
+            }
+
             if (showConfirm == "false")
             {
                 Console.WriteLine("The publisher has set to update without asking the user.");
@@ -141,8 +160,21 @@ namespace autoupdate
                 Console.WriteLine("File download failed.");
                 return -1;
             }
-
-
+            if(jsonContent.ContainsKey("md5")){
+                // 验证文件完整性
+                if (VerifyFileIntegrity(jsonContent["md5"], savePath))
+                {
+                    Console.WriteLine("File integrity verified.");
+                }
+                else
+                {
+                    Console.WriteLine("File integrity verification failed.");
+                    return -1;
+                }
+            }
+            else{
+                Console.WriteLine("No md5 value provided, skip file integrity verification.");
+            }
 
             // ZIP 文件路径
             string zipFilePath = savePath; // ZIP 文件路径
@@ -235,7 +267,7 @@ namespace autoupdate
                         bool showConfirmFound = jsonData.RootElement.TryGetProperty("showConfirm", out var showConfirm);
                         bool updateNotesFound = jsonData.RootElement.TryGetProperty("update_notes", out var updateNotes);
 
-                        if(versionFound == false || urlFound == false)
+                        if (versionFound == false || urlFound == false)
                         {
                             Console.WriteLine("JSON data is invalid.");
                             return null;
@@ -488,5 +520,40 @@ namespace autoupdate
                 Console.WriteLine("  -help               Show this help message.");
             }
         }
+
+        static bool VerifyFileIntegrity(string expectedMd5, string filePath)
+        {
+            try
+            {
+                // 打开文件并计算其 MD5 哈希值
+                using (FileStream stream = File.OpenRead(filePath))
+                {
+                    using (MD5 md5 = MD5.Create())
+                    {
+                        byte[] hashBytes = md5.ComputeHash(stream);
+
+                        // 将哈希值转换为十六进制字符串
+                        StringBuilder hashStringBuilder = new StringBuilder();
+                        foreach (byte b in hashBytes)
+                        {
+                            hashStringBuilder.Append(b.ToString("x2"));
+                        }
+
+                        string calculatedMd5 = hashStringBuilder.ToString();
+
+                        // 比较计算出的 MD5 与提供的 MD5 值
+                        Console.WriteLine($"Expected MD5: {expectedMd5}");
+                        Console.WriteLine($"Calculated MD5: {calculatedMd5}");
+                        return string.Equals(expectedMd5, calculatedMd5, StringComparison.OrdinalIgnoreCase);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during MD5 verification: {ex.Message}");
+                return false;
+            }
+        }
+
     }
 }
