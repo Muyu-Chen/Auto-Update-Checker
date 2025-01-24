@@ -19,12 +19,14 @@ namespace autoupdate
 {
     class Program
     {
+        
         static async Task<int> Main(string[] args)
         // 需要关闭当前程序的返回值为1
         {
             Console.OutputEncoding = Encoding.UTF8;
             string defaultURL = "input your defualt url here";
-
+            // 获得文件路径
+            string programPath = Assembly.GetExecutingAssembly().Location;
             Console.WriteLine("program start...");
 
             string[] input = ParseArguments(args, defaultURL);
@@ -37,6 +39,8 @@ namespace autoupdate
             }
             if (input[0] == null || input[1] == null || input[2] == null)
             {
+                string logContent = $"缺少参数，url, version, showConfirm分别为：{input[0]}, {input[1]}, {input[2]}";
+                AppendLog(logContent, findLocation());
                 // 如果缺少url或version参数，返回错误
                 // 若缺少showConfirm参数，使用默认值
                 return -1;
@@ -269,6 +273,7 @@ namespace autoupdate
 
                         if (versionFound == false || urlFound == false)
                         {
+                            AppendLog("In function FetchAndPrintVersion: JSON data is invalid.", findLocation());
                             Console.WriteLine("JSON data is invalid.");
                             return null;
                         }
@@ -278,10 +283,10 @@ namespace autoupdate
                         string showConfirmValue = showConfirmFound ? showConfirm.GetString() : "true";
                         string updateNotesValue = updateNotesFound ? updateNotes.GetString() : "No update notes available";
 
-                        Console.WriteLine($"Version: {versionValue}");
-                        Console.WriteLine($"Download URL: {urlValue}");
-                        Console.WriteLine($"showConfirm: {showConfirmValue}");
-                        Console.WriteLine($"Update Notes: {updateNotesValue}");
+                        string logContent = $"Version: {versionValue}, \nDownload URL: {urlValue}, \nshowConfirm: {showConfirmValue}, \nUpdate Notes: {updateNotesValue}";
+                        Console.WriteLine(logContent);
+                        AppendLog(logContent, findLocation());
+
 
                         var result = new Dictionary<string, string>
                         {
@@ -295,6 +300,7 @@ namespace autoupdate
                     }
                     else
                     {
+                        AppendLog("In function FetchAndPrintVersion: JSON data is null.", findLocation());
                         Console.WriteLine("JSON data is null.");
                         return null;
                     }
@@ -302,11 +308,13 @@ namespace autoupdate
             }
             catch (HttpRequestException e)
             {
+                AppendLog($"In function FetchAndPrintVersion: Error fetching JSON data: {e.Message}", findLocation());
                 Console.WriteLine($"Error fetching JSON data: {e.Message}");
                 return null;
             }
             catch (JsonException e)
             {
+                AppendLog($"In function FetchAndPrintVersion: Error parsing JSON: {e.Message}", findLocation());
                 Console.WriteLine($"Error parsing JSON: {e.Message}");
                 return null;
             }
@@ -320,6 +328,7 @@ namespace autoupdate
                 using (HttpClient client = new HttpClient())
                 {
                     Console.WriteLine($"Downloading ZIP file from: {url}");
+                    AppendLog($"Is downloading ZIP file from: {url}", findLocation());
 
                     // 下载文件内容为字节数组
                     byte[] fileBytes = await client.GetByteArrayAsync(url);
@@ -328,15 +337,18 @@ namespace autoupdate
                     await Task.Run(() => File.WriteAllBytes(savePath, fileBytes));
 
                     Console.WriteLine($"ZIP file downloaded and saved as: {savePath}");
+                    AppendLog($"ZIP file downloaded and saved as: {savePath}", findLocation());
                     return true; // 下载成功
                 }
             }
             catch (HttpRequestException e)
             {
+                AppendLog($"Error downloading the ZIP file: {e.Message}", findLocation());
                 Console.WriteLine($"Error downloading the ZIP file: {e.Message}");
             }
             catch (IOException e)
             {
+                AppendLog($"Error saving the ZIP file: {e.Message}", findLocation());
                 Console.WriteLine($"Error saving the ZIP file: {e.Message}");
             }
 
@@ -362,10 +374,12 @@ namespace autoupdate
 
                 // 解压 ZIP 文件到指定文件夹
                 ZipFile.ExtractToDirectory(zipPath, extractPath);
+                AppendLog($"ZIP file successfully extracted to: {extractPath}", findLocation());
                 return true; // 解压成功
             }
             catch (Exception e)
             {
+                AppendLog($"Error extracting ZIP file: {e.Message}", findLocation());
                 Console.WriteLine(extractPath);
                 Console.WriteLine($"Error extracting ZIP file: {e.Message}");
                 return false; // 解压失败
@@ -417,6 +431,7 @@ namespace autoupdate
             }
             catch (Exception e)
             {
+                AppendLog($"Error creating BAT script: {e.Message}", findLocation());
                 Console.WriteLine($"Error creating BAT script: {e.Message}");
             }
         }
@@ -446,6 +461,7 @@ namespace autoupdate
         {
             if (argv.Length == 0)
             {
+                AppendLog("No arguments provided. Please provide the required arguments.", findLocation());
                 Console.WriteLine("No arguments provided. Please provide the required arguments.");
                 return new string[] { "helpModel", null, null };
             }
@@ -453,6 +469,7 @@ namespace autoupdate
             Dictionary<string, string> argsDict = new Dictionary<string, string>();
             for (int i = 0; i < argv.Length; i++)
             {
+
                 if (argv[i].StartsWith("-") || argv[i].StartsWith("/"))
                 {
                     string key = argv[i].Substring(1);
@@ -497,6 +514,7 @@ namespace autoupdate
 
         static void ShowHelp()
         {
+            AppendLog("Is showing help message.", findLocation());
             string programName = System.Diagnostics.Process.GetCurrentProcess().MainModule.ModuleName;
             string programNameWithoutExtension = Path.GetFileNameWithoutExtension(programName);
             string currentCulture = CultureInfo.CurrentCulture.Name;
@@ -552,6 +570,50 @@ namespace autoupdate
             {
                 Console.WriteLine($"Error during MD5 verification: {ex.Message}");
                 return false;
+            }
+        }
+
+        public static void AppendLog(string logContent, string directoryPath)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(directoryPath)){
+                    throw new ArgumentException("无法解析程序路径的目录，请检查输入的路径是否正确。");
+                }
+                if (!Directory.Exists(directoryPath)){
+                    throw new DirectoryNotFoundException($"指定的目录不存在：{directoryPath}");
+                }
+
+                // 日志文件的完整路径
+                string logFilePath = Path.Combine(directoryPath, "update_log.txt");
+
+                // 格式化日志内容，增加时间戳
+                string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {logContent}{Environment.NewLine}";
+
+                // 检查文件是否存在
+                if (!File.Exists(logFilePath))
+                {
+                    // 文件不存在，创建文件并写入内容，编码为 UTF-8 with BOM
+                    using (StreamWriter writer = new StreamWriter(logFilePath, false, new UTF8Encoding(true)))
+                    {
+                        writer.Write(logEntry);
+                    }
+                }
+                else
+                {
+                    // 文件存在，追加内容，同时保持 UTF-8 with BOM 编码
+                    using (StreamWriter writer = new StreamWriter(logFilePath, true, new UTF8Encoding(true)))
+                    {
+                        writer.Write(logEntry);
+                    }
+                }
+
+                Console.WriteLine("日志已成功写入到文件。");
+            }
+            catch (Exception ex)
+            {
+                // 捕获异常并打印
+                Console.WriteLine($"写入日志时发生错误：{ex.Message}");
             }
         }
 
