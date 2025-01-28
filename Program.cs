@@ -51,14 +51,35 @@ namespace autoupdate
             // 在等待异步操作完成期间执行其他操作
             Console.WriteLine("Doing other work...");
             // 等待异步操作完成并获取结果
-            var jsonContent = await fetchTask;
+            var jsonContent = new Dictionary<string, string>
+            {
+                ["showConfirm"] = input[2]
+            };
+            
+            var fetchedContent = await fetchTask;
+            if(fetchedContent == null)
+            {
+                AppendLog("Failed to fetch version data.", findLocation());
+                Console.WriteLine("Failed to fetch version data.");
+                return -1;
+            }
+
+
+
+
+            foreach (var kvp in fetchedContent)
+            {
+                jsonContent[kvp.Key] = kvp.Value; // 如果 key 存在，则覆盖其值
+            }
+
+            Console.WriteLine("Fetching completed. Then print out the json content");
+            Console.WriteLine("jsonContent: " + jsonContent);
+
             if (jsonContent == null)
             {
                 Console.WriteLine("jsonContent is null, return");
                 return -1;
             }
-            Console.WriteLine(jsonContent["url"], jsonContent["version"]);
-            //string downloadUrl = version["url"];
 
             if (jsonContent == null)
             {
@@ -152,6 +173,17 @@ namespace autoupdate
             string location = findLocation();
             Console.WriteLine($"The location of the program is: {location}");
 
+            if (jsonContent["restart"] == "true")
+            {
+                restart = true;
+                string newName = jsonContent["newName"];
+                string newNamePath = location + "\\" + newName;
+            }
+            else
+            {
+                restart = false;
+            }
+
             // 下载文件
             string savePath = location + "\\downloaded_file.zip";      // 保存路径
             bool success = await DownloadZipFileAsync(downloadUrl, savePath);
@@ -191,7 +223,15 @@ namespace autoupdate
                 Console.WriteLine("ZIP file extracted successfully.");
 
                 // 调用创建 BAT 脚本的函数
-                CreateBatScript(batFilePath, extractPath, applicationPath);
+                if (restart)
+                {
+                    CreateBatScript(batFilePath, extractPath, applicationPath, true, newNamePath);
+                }
+                else
+                {
+                    CreateBatScript(batFilePath, extractPath, applicationPath, false, null);
+                }
+
                 Console.WriteLine($"BAT script generated: {batFilePath}");
                 // 启动 BAT 脚本
                 System.Diagnostics.Process.Start(batFilePath);
@@ -270,6 +310,8 @@ namespace autoupdate
                         bool urlFound = jsonData.RootElement.TryGetProperty("download_url", out var url);
                         bool showConfirmFound = jsonData.RootElement.TryGetProperty("showConfirm", out var showConfirm);
                         bool updateNotesFound = jsonData.RootElement.TryGetProperty("update_notes", out var updateNotes);
+                        bool restartFound = jsonData.RootElement.TryGetProperty("restart", out var restart);
+                        bool newNameFound = jsonData.RootElement.TryGetProperty("newName", out var newName);
 
                         if (versionFound == false || urlFound == false)
                         {
@@ -282,17 +324,31 @@ namespace autoupdate
                         string urlValue = urlFound ? url.GetString() : "default_value";
                         string showConfirmValue = showConfirmFound ? showConfirm.GetString() : "true";
                         string updateNotesValue = updateNotesFound ? updateNotes.GetString() : "No update notes available";
+                        string restartValue = restartFound ? restart.GetString() : "false";
 
-                        string logContent = $"Version: {versionValue}, \nDownload URL: {urlValue}, \nshowConfirm: {showConfirmValue}, \nUpdate Notes: {updateNotesValue}";
+                        string logContent = $"Version: {versionValue}, \nDownload URL: {urlValue}, \nshowConfirm: {showConfirmValue}, \nrestart: {restartValue}, \nnew name: {newNameValue}, \nUpdate Notes: {updateNotesValue}";
                         Console.WriteLine(logContent);
                         AppendLog(logContent, findLocation());
 
+                        if ((!restartValue == "true") ||  newNameFound == false)
+                        {
+                            restartValue = "false";
+                            string newNameValue = "not required";
+                        }
+                        else
+                        {
+                            restartValue = "true";
+                            string newNameValue = newName.GetString();
+
+                        }
 
                         var result = new Dictionary<string, string>
                         {
                             { "version", versionValue },
                             { "url", urlValue },
                             { "showConfirm", showConfirmValue.ToString() },
+                            { "restart", restartValue },
+                            { "newName", newNameValue },
                             { "update_notes", updateNotesValue }
                         };
 
@@ -387,7 +443,7 @@ namespace autoupdate
         }
 
 
-        static void CreateBatScript(string batFilePath, string extractPath, string applicationPath)
+        static void CreateBatScript(string batFilePath, string extractPath, string applicationPath, bool restart, string newNamePath)
         {
             try
             {
@@ -412,11 +468,16 @@ namespace autoupdate
             REM 替代新文件
             set extractPath=""{extractPath}""
             set applicationPath=""{applicationPath}""
+            set newNamePath=""{newNamePath}""
 
             xcopy ""%extractPath%\*"" ""%applicationPath%"" /E /Y /R /C /I
 
             REM 重启程序，可选
-            REM start """" ""%applicationPath%\GUIClient.exe""
+            if ""{restart}"" == ""true"" (
+                echo Restarting the program...
+                timeout /t 3 /nobreak >null
+                start """" ""%newNamePath%""
+            )
 
             REM End of script
             ";
@@ -457,7 +518,8 @@ namespace autoupdate
         }
 
 
-        static string[] ParseArguments(string[] argv, string defaultURL = null)
+        static string[] ParseArguments
+        (string[] argv, string defaultURL = null)
         {
             if (argv.Length == 0)
             {
@@ -494,6 +556,7 @@ namespace autoupdate
             string url = argsDict.ContainsKey("url") ? argsDict["url"] : defaultURL;
             string version = argsDict.ContainsKey("version") ? argsDict["version"] : null;
             string showConfirm = argsDict.ContainsKey("showConfirm") && argsDict["showConfirm"]?.ToLower() == "false" ? "false" : "true";
+            //string restart = argsDict.ContainsKey("restart") && argsDict["restart"]?.ToLower() == "false" ? "false" : "true";
 
 
             if (!argsDict.ContainsKey("version"))

@@ -158,7 +158,7 @@ You no longer need to worry about any details related to updates. Just update th
     print(f"error when updating: {e}")
  ```
 
- 其中仅支持不高于4位的版本号，即，如果最新版为4.3.2.1，在线获取的最新版为4.3.3，也可以更新。无需补位。版本号从左往右获取并比较大小。   
+ 其中仅支持不高于4位的版本号，即，如果本地版为4.3.2.1，在线获取的最新版为4.3.3，也可以更新。无需补位。版本号从左往右获取并比较大小。   
  
  返回值为1：新版本下载完成，5s后更新，请在5s内退出所有占用；    
  返回值为0：版本是最新版。   
@@ -170,12 +170,17 @@ You no longer need to worry about any details related to updates. Just update th
     "download_url": "https://download.xxx/new_version.zip",
     "showConfirm": "true",
     "update_notes": "your update notes",
-    "md5": "xxxxxxxxxx"
+    "md5": "xxxxxxxxxx",
+    "restart": "true",
+    "newName": "new exe name you want to restart"
+
    }
  ```
  "showConfirm": "true"的意思是是否提示用户需要更新，若为"false"则不提示，直接更新。此设置高于--showConfirm中的设置。
  "md5"可选，若没有就不对完整性进行验证。
  你只需要更新版本号，所有客户端都可以在更新时检查是否有新的版本（若客户端版本更新，则不更新），并自动更新。  
+ "restart"可选，若不需要，建议填写为“false”而不是直接删除以免兼容问题。
+ "newName"是更新后打开的文件名，可以为相对路径，以 xxxFold\\exeName.exe 形式完成。开头和结尾不要有斜杠。
 
  ## How to use?
  In your application that requires updates, use a system call to invoke this `.exe` file. For example, in C language:  
@@ -240,7 +245,7 @@ You no longer need to worry about any details related to updates. Just update th
  except Exception as e:
     print(f"error when updating: {e}")
  ```
- Implemented version number comparison that supports updating to versions with less than four segments. If the latest version is 4.3.2.1 and the online latest version is 4.3.3, an update is still possible. Version numbers are fetched and compared from left to right without padding.
+ Implemented version number comparison that supports updating to versions with less than four segments. If the local version is 4.3.2.1 and the online latest version is 4.3.3, an update is still possible. Version numbers are fetched and compared from left to right without padding.
 
  Return Values:
  1: A new version has been downloaded. The update will start after 5 seconds. Please close all processes within 5 seconds.  
@@ -254,7 +259,9 @@ You no longer need to worry about any details related to updates. Just update th
     "download_url": "https://download.xxx/new_version.zip",
     "showConfirm": "true",
     "update_notes": "your update notes",
-    "md5": "xxxxxxx"
+    "md5": "xxxxxxx",
+    "restart": "true",
+    "newName": "new exe name you want to restart"
    }
  ```
  md5 is optional.  
@@ -286,7 +293,7 @@ You no longer need to worry about any details related to updates. Just update th
 如果您遇到任何问题，请参考项目的 [README.md](README.md) 文件或联系[项目发起者](https://github.com/Muyu-Chen)以获取帮助。  
 
 # Todo  
- - [ ] 添加参数：重新启动程序（写入bat中）
+ - [x] 添加参数：重新启动程序（写入bat中）
  - [x] 弹窗弹出更新说明
  - [x] 增加完整性验证
  - [ ] 优化界面  
