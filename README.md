@@ -2,6 +2,50 @@
 The **Auto-Update Checker** is a **lightweight, small, and portable** tool designed for **automatic updates**. By checking the JSON file on a remote server to compare the current version with the latest version, the software automatically downloads, extracts, and replaces files to ensure it is always up-to-date. The tool includes features such as update pop-ups, update instructions, and more.  
 **Auto-Update Checker** 是一款用于自动更新的**轻量、小巧、便携**、**实用**且**易用的更新工具**。通过检查远程服务器上的 JSON 文件来对比当前版本和最新版本号，软件实现自动下载、解压和覆盖操作，从而保持软件始终为最新版本。工具还包括更新弹窗、更新说明等功能。  
 
+# TL;DR Version | 太长不看版  
+在服务器上新建一个 JSON 文件，并确保外网可以访问，内容如下：  
+  
+Create a JSON file on the server and ensure it is accessible from the internet. The content should be as follows:  
+
+```json
+   {
+    "version": "10.9.8.7",
+    "download_url": "https://download.xxx/new_version.zip",
+    "showConfirm": "true",
+    "update_notes": "your update notes",
+   }
+```
+
+## What you should change | 你需要修改的部分  
+version: 最新版本的版本号。  
+The latest version number.  
+download_url: 更新包的下载地址。  
+The URL to download the update package.  
+update_notes: 更新日志。
+The update log/notes.
+## Executing the Update Check | 执行更新检查
+你可以使用 GPT 询问如何在特定编程语言中执行 CMD 命令，并获取返回值。  
+You may ask GPT how to execute a CMD command in your preferred programming language and retrieve its return value.  
+执行以下命令以检查更新：  
+Run the following command to check for updates:  
+`Auto-Update-Checker.exe -url website.com/yourJsonUrl.json -version "1.1.1"`
+yourJsonUrl.json: 需要替换为你的 JSON 文件的实际地址。  
+Replace with the actual URL of your JSON file.  
+"1.1.1": 需要替换为当前程序的版本号。  
+Replace with your application's current version number.  
+
+## Return Value | 返回值
+返回值 = 1（Update available）
+The return value is 1 (Update available).
+→ 立刻关闭程序，否则更新时可能发生文件冲突，导致更新失败。
+→ Immediately close the application to avoid file conflicts and update failures.
+
+返回值 ≠ 1（No update needed）
+If the return value is not 1 (No update needed).
+→ 无需更新，程序可正常运行。
+→ No update required, continue running normally.
+
+
 
 # Why choose me? Is there any benefits?  
 ## 为什么选择我？有什么优势？
